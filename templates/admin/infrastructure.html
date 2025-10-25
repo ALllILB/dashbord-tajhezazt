@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت زیرساخت{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-network-wired"></i> مدیریت زیرساخت</h2>
+    <a href="{{ url_for('infrastructure_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-right"></i> بازگشت به داشبورد
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-plus"></i> افزودن زیرساخت جدید</h5>
+            </div>
+            <div class="card-body">
+                <form id="addInfrastructureForm">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="location" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="printer" class="form-label">پرینتر</label>
+                            <input type="number" class="form-control" id="printer" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="computer" class="form-label">کامپیوتر</label>
+                            <input type="number" class="form-control" id="computer" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="voipPhone" class="form-label">تلفن ویپ</label>
+                            <input type="number" class="form-control" id="voipPhone" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="camera" class="form-label">دوربین</label>
+                            <input type="number" class="form-control" id="camera" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="attendanceClock" class="form-label">ساعت زن تردد</label>
+                            <input type="number" class="form-control" id="attendanceClock" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="nutritionClock" class="form-label">ساعت زن تغذیه</label>
+                            <input type="number" class="form-control" id="nutritionClock" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nvr" class="form-label">NVR</label>
+                            <input type="number" class="form-control" id="nvr" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="managedSwitch" class="form-label">سوئیچ مدیریتی</label>
+                            <input type="number" class="form-control" id="managedSwitch" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="unmanagedSwitch" class="form-label">سوئیچ غیرمدیریتی</label>
+                            <input type="number" class="form-control" id="unmanagedSwitch" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="server" class="form-label">سرور</label>
+                            <input type="number" class="form-control" id="server" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="voipPbx" class="form-label">VOIP PBX</label>
+                            <input type="number" class="form-control" id="voipPbx" min="0" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="firewall" class="form-label">Firewall</label>
+                            <input type="number" class="form-control" id="firewall" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> ذخیره زیرساخت
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> لیست زیرساخت‌ها</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportInfrastructure">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    <label class="btn btn-warning btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importInfrastructure" accept=".xlsx" style="display: none;">
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>محل</th>
+                                <th>پرینتر</th>
+                                <th>کامپیوتر</th>
+                                <th>تلفن ویپ</th>
+                                <th>دوربین</th>
+                                <th>ساعت زن تردد</th>
+                                <th>ساعت زن تغذیه</th>
+                                <th>NVR</th>
+                                <th>سوئیچ مدیریتی</th>
+                                <th>سوئیچ غیرمدیریتی</th>
+                                <th>سرور</th>
+                                <th>VOIP PBX</th>
+                                <th>Firewall</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="infrastructureTableBody">
+                            <tr>
+                                <td colspan="14" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editInfrastructureModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش اطلاعات زیرساخت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editInfrastructureForm">
+                    <input type="hidden" id="editInfrastructureId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editPrinter" class="form-label">پرینتر</label>
+                            <input type="number" class="form-control" id="editPrinter" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editComputer" class="form-label">کامپیوتر</label>
+                            <input type="number" class="form-control" id="editComputer" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editVoipPhone" class="form-label">تلفن ویپ</label>
+                            <input type="number" class="form-control" id="editVoipPhone" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editCamera" class="form-label">دوربین</label>
+                            <input type="number" class="form-control" id="editCamera" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editAttendanceClock" class="form-label">ساعت زن تردد</label>
+                            <input type="number" class="form-control" id="editAttendanceClock" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editNutritionClock" class="form-label">ساعت زن تغذیه</label>
+                            <input type="number" class="form-control" id="editNutritionClock" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editNvr" class="form-label">NVR</label>
+                            <input type="number" class="form-control" id="editNvr" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editManagedSwitch" class="form-label">سوئیچ مدیریتی</label>
+                            <input type="number" class="form-control" id="editManagedSwitch" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editUnmanagedSwitch" class="form-label">سوئیچ غیرمدیریتی</label>
+                            <input type="number" class="form-control" id="editUnmanagedSwitch" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editServer" class="form-label">سرور</label>
+                            <input type="number" class="form-control" id="editServer" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editVoipPbx" class="form-label">VOIP PBX</label>
+                            <input type="number" class="form-control" id="editVoipPbx" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editFirewall" class="form-label">Firewall</label>
+                            <input type="number" class="form-control" id="editFirewall" min="0" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveInfrastructureChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/xlsx.min.js') }}"></script>
+<script>
+    // Global variables
+    let infrastructureData = [];
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadInfrastructureData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Add infrastructure form
+        document.getElementById('addInfrastructureForm').addEventListener('submit', addInfrastructure);
+        
+        // Export/Import buttons
+        document.getElementById('exportInfrastructure').addEventListener('click', exportToExcel);
+        document.getElementById('importInfrastructure').addEventListener('change', handleFileImport);
+        
+        // Save button for modal
+        document.getElementById('saveInfrastructureChanges').addEventListener('click', saveInfrastructureChanges);
+    }
+    
+    // Load data from API
+    async function loadInfrastructureData() {
+        try {
+            const response = await fetch('/api/infrastructure');
+            infrastructureData = await response.json();
+            renderInfrastructureTable(infrastructureData);
+        } catch (error) {
+            console.error('Error loading infrastructure data:', error);
+            document.getElementById('infrastructureTableBody').innerHTML = '<tr><td colspan="14" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render table
+    function renderInfrastructureTable(data) {
+        const tbody = document.getElementById('infrastructureTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.location}</td>
+                <td>${item.printer}</td>
+                <td>${item.computer}</td>
+                <td>${item.voip_phone}</td>
+                <td>${item.camera}</td>
+                <td>${item.attendance_clock}</td>
+                <td>${item.nutrition_clock}</td>
+                <td>${item.nvr}</td>
+                <td>${item.managed_switch}</td>
+                <td>${item.unmanaged_switch}</td>
+                <td>${item.server}</td>
+                <td>${item.voip_pbx}</td>
+                <td>${item.firewall}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editInfrastructure(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInfrastructure(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Add infrastructure
+    async function addInfrastructure(event) {
+        event.preventDefault();
+        
+        const data = {
+            location: document.getElementById('location').value,
+            printer: document.getElementById('printer').value,
+            computer: document.getElementById('computer').value,
+            voip_phone: document.getElementById('voipPhone').value,
+            camera: document.getElementById('camera').value,
+            attendance_clock: document.getElementById('attendanceClock').value,
+            nutrition_clock: document.getElementById('nutritionClock').value,
+            nvr: document.getElementById('nvr').value,
+            managed_switch: document.getElementById('managedSwitch').value,
+            unmanaged_switch: document.getElementById('unmanagedSwitch').value,
+            server: document.getElementById('server').value,
+            voip_pbx: document.getElementById('voipPbx').value,
+            firewall: document.getElementById('firewall').value
+        };
+        
+        try {
+            const response = await fetch('/api/infrastructure', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                document.getElementById('addInfrastructureForm').reset();
+                loadInfrastructureData();
+                showAlert('زیرساخت با موفقیت اضافه شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در افزودن زیرساخت', 'danger');
+            }
+        } catch (error) {
+            console.error('Error adding infrastructure:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Edit infrastructure
+    function editInfrastructure(id) {
+        const item = infrastructureData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editInfrastructureId').value = item.id;
+        document.getElementById('editLocation').value = item.location;
+        document.getElementById('editPrinter').value = item.printer;
+        document.getElementById('editComputer').value = item.computer;
+        document.getElementById('editVoipPhone').value = item.voip_phone;
+        document.getElementById('editCamera').value = item.camera;
+        document.getElementById('editAttendanceClock').value = item.attendance_clock;
+        document.getElementById('editNutritionClock').value = item.nutrition_clock;
+        document.getElementById('editNvr').value = item.nvr;
+        document.getElementById('editManagedSwitch').value = item.managed_switch;
+        document.getElementById('editUnmanagedSwitch').value = item.unmanaged_switch;
+        document.getElementById('editServer').value = item.server;
+        document.getElementById('editVoipPbx').value = item.voip_pbx;
+        document.getElementById('editFirewall').value = item.firewall;
+        
+        new bootstrap.Modal(document.getElementById('editInfrastructureModal')).show();
+    }
+    
+    // Save changes
+    async function saveInfrastructureChanges() {
+        const id = document.getElementById('editInfrastructureId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            printer: document.getElementById('editPrinter').value,
+            computer: document.getElementById('editComputer').value,
+            voip_phone: document.getElementById('editVoipPhone').value,
+            camera: document.getElementById('editCamera').value,
+            attendance_clock: document.getElementById('editAttendanceClock').value,
+            nutrition_clock: document.getElementById('editNutritionClock').value,
+            nvr: document.getElementById('editNvr').value,
+            managed_switch: document.getElementById('editManagedSwitch').value,
+            unmanaged_switch: document.getElementById('editUnmanagedSwitch').value,
+            server: document.getElementById('editServer').value,
+            voip_pbx: document.getElementById('editVoipPbx').value,
+            firewall: document.getElementById('editFirewall').value
+        };
+        
+        try {
+            const response = await fetch(`/api/infrastructure/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editInfrastructureModal')).hide();
+                loadInfrastructureData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving infrastructure changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete infrastructure
+    async function deleteInfrastructure(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/infrastructure/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadInfrastructureData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting infrastructure:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/infrastructure', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                loadInfrastructureData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel() {
+        if (!infrastructureData || infrastructureData.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(infrastructureData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'infrastructure');
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, 'infrastructure.xlsx');
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

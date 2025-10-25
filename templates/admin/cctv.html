@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت دوربین‌های مداربسته{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-video"></i> مدیریت دوربین‌های مداربسته</h2>
+    <a href="{{ url_for('equipment_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-right"></i> بازگشت به داشبورد
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="fas fa-plus"></i> افزودن نیاز دوربین جدید</h5>
+            </div>
+            <div class="card-body">
+                <form id="addCCTVForm">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pointNeeded" class="form-label">نقطه مورد نیاز</label>
+                        <input type="text" class="form-control" id="pointNeeded" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">اولویت</label>
+                        <select class="form-select" id="priority" required>
+                            <option value="فوری">فوری</option>
+                            <option value="عادی">عادی</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">دلیل نیاز</label>
+                        <textarea class="form-control" id="reason" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> ذخیره نیاز
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> لیست نیازهای دوربین مداربسته</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportCCTV">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    <label class="btn btn-warning btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importCCTV" accept=".xlsx" style="display: none;">
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نقطه مورد نیاز</th>
+                                <th>اولویت</th>
+                                <th>دلیل نیاز</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cctvTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editCCTVModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش نیاز دوربین مداربسته</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCCTVForm">
+                    <input type="hidden" id="editCCTVId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPointNeeded" class="form-label">نقطه مورد نیاز</label>
+                        <input type="text" class="form-control" id="editPointNeeded" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPriority" class="form-label">اولویت</label>
+                        <select class="form-select" id="editPriority" required>
+                            <option value="فوری">فوری</option>
+                            <option value="عادی">عادی</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editReason" class="form-label">دلیل نیاز</label>
+                        <textarea class="form-control" id="editReason" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveCCTVChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/xlsx.min.js') }}"></script>
+<script>
+    // Global variables
+    let cctvData = [];
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCCTVData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Add CCTV form
+        document.getElementById('addCCTVForm').addEventListener('submit', addCCTV);
+        
+        // Export/Import buttons
+        document.getElementById('exportCCTV').addEventListener('click', exportToExcel);
+        document.getElementById('importCCTV').addEventListener('change', handleFileImport);
+        
+        // Save button for modal
+        document.getElementById('saveCCTVChanges').addEventListener('click', saveCCTVChanges);
+    }
+    
+    // Load data from API
+    async function loadCCTVData() {
+        try {
+            const response = await fetch('/api/cctv');
+            cctvData = await response.json();
+            renderCCTVTable(cctvData);
+        } catch (error) {
+            console.error('Error loading CCTV data:', error);
+            document.getElementById('cctvTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render table
+    function renderCCTVTable(data) {
+        const tbody = document.getElementById('cctvTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.location}</td>
+                <td>${item.point_needed}</td>
+                <td class="${item.priority === 'فوری' ? 'priority-urgent' : 'priority-normal'}">
+                    ${item.priority}
+                </td>
+                <td>${item.reason || '-'}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editCCTV(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCCTV(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Add CCTV
+    async function addCCTV(event) {
+        event.preventDefault();
+        
+        const data = {
+            location: document.getElementById('location').value,
+            point_needed: document.getElementById('pointNeeded').value,
+            priority: document.getElementById('priority').value,
+            reason: document.getElementById('reason').value
+        };
+        
+        try {
+            const response = await fetch('/api/cctv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                document.getElementById('addCCTVForm').reset();
+                loadCCTVData();
+                showAlert('نیاز دوربین با موفقیت اضافه شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در افزودن نیاز دوربین', 'danger');
+            }
+        } catch (error) {
+            console.error('Error adding CCTV:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Edit CCTV
+    function editCCTV(id) {
+        const item = cctvData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editCCTVId').value = item.id;
+        document.getElementById('editLocation').value = item.location;
+        document.getElementById('editPointNeeded').value = item.point_needed;
+        document.getElementById('editPriority').value = item.priority;
+        document.getElementById('editReason').value = item.reason || '';
+        
+        new bootstrap.Modal(document.getElementById('editCCTVModal')).show();
+    }
+    
+    // Save changes
+    async function saveCCTVChanges() {
+        const id = document.getElementById('editCCTVId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            point_needed: document.getElementById('editPointNeeded').value,
+            priority: document.getElementById('editPriority').value,
+            reason: document.getElementById('editReason').value
+        };
+        
+        try {
+            const response = await fetch(`/api/cctv/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editCCTVModal')).hide();
+                loadCCTVData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving CCTV changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete CCTV
+    async function deleteCCTV(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/cctv/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadCCTVData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting CCTV:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/cctv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                loadCCTVData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel() {
+        if (!cctvData || cctvData.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(cctvData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'cctv');
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, 'cctv.xlsx');
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

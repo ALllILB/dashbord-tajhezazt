@@ -1,0 +1,800 @@
+{% extends "base.html" %}
+
+{% block title %}داشبورد مدیریت زیرساخت{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    .stats-card {
+        transition: transform 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .progress {
+        height: 25px;
+    }
+    .stat-item {
+        margin-bottom: 15px;
+    }
+    .stat-label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-network-wired"></i> داشبورد مدیریت زیرساخت</h2>
+    <div>
+        {% if session.role == 'admin' %}
+        <a href="{{ url_for('admin_infrastructure') }}" class="btn btn-primary">
+            <i class="fas fa-cog"></i> مدیریت زیرساخت
+        </a>
+        {% endif %}
+        <button class="btn btn-success" id="exportData">
+            <i class="fas fa-file-excel"></i> خروجی Excel
+        </button>
+        {% if session.role == 'admin' %}
+        <label class="btn btn-primary">
+            <i class="fas fa-file-upload"></i> وارد کردن Excel
+            <input type="file" id="importData" accept=".xlsx" style="display: none;">
+        </label>
+        {% endif %}
+    </div>
+</div>
+
+<div class="filter-section">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="locationFilter" class="form-label">فیلتر بر اساس محل</label>
+            <select class="form-select" id="locationFilter">
+                <option value="">همه محل‌ها</option>
+            </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100" id="resetFilters">
+                <i class="fas fa-redo"></i> بازنشانی فیلترها
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalComputers">0</h4>
+                        <p class="card-text">کامپیوتر</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-desktop fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalPrinters">0</h4>
+                        <p class="card-text">پرینتر</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-print fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalVoipPhones">0</h4>
+                        <p class="card-text">تلفن ویپ</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-phone fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stats-card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalCameras">0</h4>
+                        <p class="card-text">دوربین</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> توزیع تجهیزات بر اساس نوع</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="equipmentTypeChart"></canvas>
+                    <div id="equipmentTypeChartFallback" class="text-center p-3" style="display: none;">
+                        <p>نمودار در دسترس نیست. داده‌ها در جدول زیر نمایش داده شده‌اند:</p>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>نوع تجهیزات</th>
+                                    <th>تعداد</th>
+                                </tr>
+                            </thead>
+                            <tbody id="equipmentTypeTableBody">
+                                <!-- داده‌ها با جاوا اسکریپت پر می‌شوند -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> توزیع تجهیزات بر اساس محل</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="locationChart"></canvas>
+                    <div id="locationChartFallback" class="text-center p-3" style="display: none;">
+                        <p>نمودار در دسترس نیست. داده‌ها در جدول زیر نمایش داده شده‌اند:</p>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>محل</th>
+                                    <th>تعداد کل تجهیزات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locationTableBody">
+                                <!-- داده‌ها با جاوا اسکریپت پر می‌شوند -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-table"></i> جدول زیرساخت</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>محل</th>
+                        <th>پرینتر</th>
+                        <th>کامپیوتر</th>
+                        <th>تلفن ویپ</th>
+                        <th>دوربین</th>
+                        <th>ساعت زن تردد</th>
+                        <th>ساعت زن تغذیه</th>
+                        <th>NVR</th>
+                        <th>سوئیچ مدیریتی</th>
+                        <th>سوئیچ غیرمدیریتی</th>
+                        <th>سرور</th>
+                        <th>VOIP PBX</th>
+                        <th>Firewall</th>
+                        {% if session.role == 'admin' %}
+                        <th>عملیات</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody id="infrastructureTableBody">
+                    <tr>
+                        <td colspan="14" class="text-center">در حال بارگذاری...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editInfrastructureModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش اطلاعات زیرساخت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editInfrastructureForm">
+                    <input type="hidden" id="editInfrastructureId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editPrinter" class="form-label">پرینتر</label>
+                            <input type="number" class="form-control" id="editPrinter" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editComputer" class="form-label">کامپیوتر</label>
+                            <input type="number" class="form-control" id="editComputer" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editVoipPhone" class="form-label">تلفن ویپ</label>
+                            <input type="number" class="form-control" id="editVoipPhone" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editCamera" class="form-label">دوربین</label>
+                            <input type="number" class="form-control" id="editCamera" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editAttendanceClock" class="form-label">ساعت زن تردد</label>
+                            <input type="number" class="form-control" id="editAttendanceClock" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editNutritionClock" class="form-label">ساعت زن تغذیه</label>
+                            <input type="number" class="form-control" id="editNutritionClock" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editNvr" class="form-label">NVR</label>
+                            <input type="number" class="form-control" id="editNvr" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editManagedSwitch" class="form-label">سوئیچ مدیریتی</label>
+                            <input type="number" class="form-control" id="editManagedSwitch" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editUnmanagedSwitch" class="form-label">سوئیچ غیرمدیریتی</label>
+                            <input type="number" class="form-control" id="editUnmanagedSwitch" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editServer" class="form-label">سرور</label>
+                            <input type="number" class="form-control" id="editServer" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editVoipPbx" class="form-label">VOIP PBX</label>
+                            <input type="number" class="form-control" id="editVoipPbx" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editFirewall" class="form-label">Firewall</label>
+                            <input type="number" class="form-control" id="editFirewall" min="0" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveInfrastructureChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- استفاده از CDN برای Chart.js و XLSX.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+    // Global variables
+    let infrastructureData = [];
+    let equipmentTypeChart = null;
+    let locationChart = null;
+    let currentFilter = {
+        location: ''
+    };
+    
+    // Check if user is admin
+    const isAdmin = {{ 'true' if session.role == 'admin' else 'false' }};
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // اطمینان از بارگذاری Chart.js قبل از استفاده
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            document.getElementById('infrastructureTableBody').innerHTML = '<tr><td colspan="14" class="text-center text-danger">خطا در بارگذاری کتابخانه نمودار</td></tr>';
+            // نمایش جداول جایگزین برای نمودارها
+            document.getElementById('equipmentTypeChart').style.display = 'none';
+            document.getElementById('equipmentTypeChartFallback').style.display = 'block';
+            document.getElementById('locationChart').style.display = 'none';
+            document.getElementById('locationChartFallback').style.display = 'block';
+        }
+        
+        loadInfrastructureData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Filter controls
+        document.getElementById('locationFilter').addEventListener('change', applyFilters);
+        document.getElementById('resetFilters').addEventListener('click', resetFilters);
+        
+        // Export/Import buttons
+        document.getElementById('exportData').addEventListener('click', exportToExcel);
+        if (isAdmin) {
+            document.getElementById('importData').addEventListener('change', handleFileImport);
+        }
+        
+        // Save button for modal
+        document.getElementById('saveInfrastructureChanges').addEventListener('click', saveInfrastructureChanges);
+    }
+    
+    // Load data from API
+    async function loadInfrastructureData() {
+        try {
+            const response = await fetch('/api/infrastructure');
+            infrastructureData = await response.json();
+            renderInfrastructureTable(infrastructureData);
+            updateStats(infrastructureData);
+            updateCharts(infrastructureData);
+            updateLocationFilter(infrastructureData);
+        } catch (error) {
+            console.error('Error loading infrastructure data:', error);
+            document.getElementById('infrastructureTableBody').innerHTML = '<tr><td colspan="14" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render table
+    function renderInfrastructureTable(data) {
+        const tbody = document.getElementById('infrastructureTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.location}</td>
+                <td>${item.printer}</td>
+                <td>${item.computer}</td>
+                <td>${item.voip_phone}</td>
+                <td>${item.camera}</td>
+                <td>${item.attendance_clock}</td>
+                <td>${item.nutrition_clock}</td>
+                <td>${item.nvr}</td>
+                <td>${item.managed_switch}</td>
+                <td>${item.unmanaged_switch}</td>
+                <td>${item.server}</td>
+                <td>${item.voip_pbx}</td>
+                <td>${item.firewall}</td>
+                ${isAdmin ? `
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editInfrastructure(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInfrastructure(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+                ` : ''}
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Update statistics
+    function updateStats(data) {
+        let totalComputers = 0;
+        let totalPrinters = 0;
+        let totalVoipPhones = 0;
+        let totalCameras = 0;
+        
+        data.forEach(item => {
+            totalComputers += parseInt(item.computer) || 0;
+            totalPrinters += parseInt(item.printer) || 0;
+            totalVoipPhones += parseInt(item.voip_phone) || 0;
+            totalCameras += parseInt(item.camera) || 0;
+        });
+        
+        document.getElementById('totalComputers').textContent = totalComputers;
+        document.getElementById('totalPrinters').textContent = totalPrinters;
+        document.getElementById('totalVoipPhones').textContent = totalVoipPhones;
+        document.getElementById('totalCameras').textContent = totalCameras;
+    }
+    
+    // Update charts
+    function updateCharts(data) {
+        // Equipment type chart
+        const equipmentTypes = {
+            'پرینتر': 0,
+            'کامپیوتر': 0,
+            'تلفن ویپ': 0,
+            'دوربین': 0,
+            'ساعت زن تردد': 0,
+            'ساعت زن تغذیه': 0,
+            'NVR': 0,
+            'سوئیچ مدیریتی': 0,
+            'سوئیچ غیرمدیریتی': 0,
+            'سرور': 0,
+            'VOIP PBX': 0,
+            'Firewall': 0
+        };
+        
+        data.forEach(item => {
+            equipmentTypes['پرینتر'] += parseInt(item.printer) || 0;
+            equipmentTypes['کامپیوتر'] += parseInt(item.computer) || 0;
+            equipmentTypes['تلفن ویپ'] += parseInt(item.voip_phone) || 0;
+            equipmentTypes['دوربین'] += parseInt(item.camera) || 0;
+            equipmentTypes['ساعت زن تردد'] += parseInt(item.attendance_clock) || 0;
+            equipmentTypes['ساعت زن تغذیه'] += parseInt(item.nutrition_clock) || 0;
+            equipmentTypes['NVR'] += parseInt(item.nvr) || 0;
+            equipmentTypes['سوئیچ مدیریتی'] += parseInt(item.managed_switch) || 0;
+            equipmentTypes['سوئیچ غیرمدیریتی'] += parseInt(item.unmanaged_switch) || 0;
+            equipmentTypes['سرور'] += parseInt(item.server) || 0;
+            equipmentTypes['VOIP PBX'] += parseInt(item.voip_pbx) || 0;
+            equipmentTypes['Firewall'] += parseInt(item.firewall) || 0;
+        });
+        
+        // Populate fallback table for equipment types
+        const equipmentTypeTableBody = document.getElementById('equipmentTypeTableBody');
+        equipmentTypeTableBody.innerHTML = '';
+        Object.keys(equipmentTypes).forEach(type => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${type}</td><td>${equipmentTypes[type]}</td>`;
+            equipmentTypeTableBody.appendChild(row);
+        });
+        
+        // Try to create the chart
+        try {
+            const ctx1 = document.getElementById('equipmentTypeChart').getContext('2d');
+            
+            if (equipmentTypeChart) {
+                equipmentTypeChart.destroy();
+            }
+            
+            equipmentTypeChart = new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(equipmentTypes),
+                    datasets: [{
+                        data: Object.values(equipmentTypes),
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF',
+                            '#FF9F40',
+                            '#FF6384',
+                            '#C9CBCF',
+                            '#4BC0C0',
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // Hide fallback table if chart is created successfully
+            document.getElementById('equipmentTypeChartFallback').style.display = 'none';
+        } catch (error) {
+            console.error('Error creating equipment type chart:', error);
+            // Show fallback table if chart creation fails
+            document.getElementById('equipmentTypeChart').style.display = 'none';
+            document.getElementById('equipmentTypeChartFallback').style.display = 'block';
+        }
+        
+        // Location chart
+        const locationData = {};
+        data.forEach(item => {
+            if (!locationData[item.location]) {
+                locationData[item.location] = 0;
+            }
+            locationData[item.location] += 
+                (parseInt(item.printer) || 0) +
+                (parseInt(item.computer) || 0) +
+                (parseInt(item.voip_phone) || 0) +
+                (parseInt(item.camera) || 0) +
+                (parseInt(item.attendance_clock) || 0) +
+                (parseInt(item.nutrition_clock) || 0) +
+                (parseInt(item.nvr) || 0) +
+                (parseInt(item.managed_switch) || 0) +
+                (parseInt(item.unmanaged_switch) || 0) +
+                (parseInt(item.server) || 0) +
+                (parseInt(item.voip_pbx) || 0) +
+                (parseInt(item.firewall) || 0);
+        });
+        
+        // Populate fallback table for locations
+        const locationTableBody = document.getElementById('locationTableBody');
+        locationTableBody.innerHTML = '';
+        Object.keys(locationData).forEach(location => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${location}</td><td>${locationData[location]}</td>`;
+            locationTableBody.appendChild(row);
+        });
+        
+        // Try to create the chart
+        try {
+            const ctx2 = document.getElementById('locationChart').getContext('2d');
+            
+            if (locationChart) {
+                locationChart.destroy();
+            }
+            
+            locationChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(locationData),
+                    datasets: [{
+                        label: 'تعداد کل تجهیزات',
+                        data: Object.values(locationData),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Hide fallback table if chart is created successfully
+            document.getElementById('locationChartFallback').style.display = 'none';
+        } catch (error) {
+            console.error('Error creating location chart:', error);
+            // Show fallback table if chart creation fails
+            document.getElementById('locationChart').style.display = 'none';
+            document.getElementById('locationChartFallback').style.display = 'block';
+        }
+    }
+    
+    // Update location filter
+    function updateLocationFilter(data) {
+        const locationFilter = document.getElementById('locationFilter');
+        const locations = [...new Set(data.map(item => item.location))];
+        
+        // Clear existing options except the first one
+        while (locationFilter.options.length > 1) {
+            locationFilter.remove(1);
+        }
+        
+        // Add new options
+        locations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location;
+            option.textContent = location;
+            locationFilter.appendChild(option);
+        });
+    }
+    
+    // Apply filters
+    function applyFilters() {
+        currentFilter.location = document.getElementById('locationFilter').value;
+        
+        let filteredData = infrastructureData;
+        if (currentFilter.location) {
+            filteredData = filteredData.filter(item => item.location === currentFilter.location);
+        }
+        
+        renderInfrastructureTable(filteredData);
+        updateStats(filteredData);
+        updateCharts(filteredData);
+    }
+    
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('locationFilter').value = '';
+        currentFilter = { location: '' };
+        
+        renderInfrastructureTable(infrastructureData);
+        updateStats(infrastructureData);
+        updateCharts(infrastructureData);
+    }
+    
+    // Edit function
+    function editInfrastructure(id) {
+        const item = infrastructureData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editInfrastructureId').value = item.id;
+        document.getElementById('editLocation').value = item.location;
+        document.getElementById('editPrinter').value = item.printer;
+        document.getElementById('editComputer').value = item.computer;
+        document.getElementById('editVoipPhone').value = item.voip_phone;
+        document.getElementById('editCamera').value = item.camera;
+        document.getElementById('editAttendanceClock').value = item.attendance_clock;
+        document.getElementById('editNutritionClock').value = item.nutrition_clock;
+        document.getElementById('editNvr').value = item.nvr;
+        document.getElementById('editManagedSwitch').value = item.managed_switch;
+        document.getElementById('editUnmanagedSwitch').value = item.unmanaged_switch;
+        document.getElementById('editServer').value = item.server;
+        document.getElementById('editVoipPbx').value = item.voip_pbx;
+        document.getElementById('editFirewall').value = item.firewall;
+        
+        new bootstrap.Modal(document.getElementById('editInfrastructureModal')).show();
+    }
+    
+    // Save changes
+    async function saveInfrastructureChanges() {
+        const id = document.getElementById('editInfrastructureId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            printer: document.getElementById('editPrinter').value,
+            computer: document.getElementById('editComputer').value,
+            voip_phone: document.getElementById('editVoipPhone').value,
+            camera: document.getElementById('editCamera').value,
+            attendance_clock: document.getElementById('editAttendanceClock').value,
+            nutrition_clock: document.getElementById('editNutritionClock').value,
+            nvr: document.getElementById('editNvr').value,
+            managed_switch: document.getElementById('editManagedSwitch').value,
+            unmanaged_switch: document.getElementById('editUnmanagedSwitch').value,
+            server: document.getElementById('editServer').value,
+            voip_pbx: document.getElementById('editVoipPbx').value,
+            firewall: document.getElementById('editFirewall').value
+        };
+        
+        try {
+            const response = await fetch(`/api/infrastructure/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editInfrastructureModal')).hide();
+                loadInfrastructureData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving infrastructure changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete function
+    async function deleteInfrastructure(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/infrastructure/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadInfrastructureData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting infrastructure:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/infrastructure', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                loadInfrastructureData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel() {
+        if (!infrastructureData || infrastructureData.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(infrastructureData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'infrastructure');
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, 'infrastructure.xlsx');
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

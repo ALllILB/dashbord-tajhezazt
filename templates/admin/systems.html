@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت سیستم‌ها{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-desktop"></i> مدیریت سیستم‌ها</h2>
+    <a href="{{ url_for('equipment_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-right"></i> بازگشت به داشبورد
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-plus"></i> افزودن سیستم جدید</h5>
+            </div>
+            <div class="card-body">
+                <form id="addSystemForm">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="systemName" class="form-label">نام سیستم</label>
+                        <input type="text" class="form-control" id="systemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user" class="form-label">کاربر</label>
+                        <input type="text" class="form-control" id="user" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ipAddress" class="form-label">آدرس IP</label>
+                        <input type="text" class="form-control" id="ipAddress" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="antivirusStatus" class="form-label">وضعیت آنتی‌ویروس</label>
+                        <select class="form-select" id="antivirusStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="firewallStatus" class="form-label">وضعیت فایروال</label>
+                        <select class="form-select" id="firewallStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> ذخیره سیستم
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> لیست سیستم‌ها</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportSystems">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    <label class="btn btn-warning btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importSystems" accept=".xlsx" style="display: none;">
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نام سیستم</th>
+                                <th>کاربر</th>
+                                <th>آدرس IP</th>
+                                <th>وضعیت آنتی‌ویروس</th>
+                                <th>وضعیت فایروال</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="systemsTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editSystemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش سیستم</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editSystemForm">
+                    <input type="hidden" id="editSystemId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSystemName" class="form-label">نام سیستم</label>
+                        <input type="text" class="form-control" id="editSystemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUser" class="form-label">کاربر</label>
+                        <input type="text" class="form-control" id="editUser" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editIpAddress" class="form-label">آدرس IP</label>
+                        <input type="text" class="form-control" id="editIpAddress" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAntivirusStatus" class="form-label">وضعیت آنتی‌ویروس</label>
+                        <select class="form-select" id="editAntivirusStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editFirewallStatus" class="form-label">وضعیت فایروال</label>
+                        <select class="form-select" id="editFirewallStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveSystemChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/xlsx.min.js') }}"></script>
+<script>
+    // Global variables
+    let systemsData = [];
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSystemsData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Add system form
+        document.getElementById('addSystemForm').addEventListener('submit', addSystem);
+        
+        // Export/Import buttons
+        document.getElementById('exportSystems').addEventListener('click', exportToExcel);
+        document.getElementById('importSystems').addEventListener('change', handleFileImport);
+        
+        // Save button for modal
+        document.getElementById('saveSystemChanges').addEventListener('click', saveSystemChanges);
+    }
+    
+    // Load data from API
+    async function loadSystemsData() {
+        try {
+            const response = await fetch('/api/systems');
+            systemsData = await response.json();
+            renderSystemsTable(systemsData);
+        } catch (error) {
+            console.error('Error loading systems data:', error);
+            document.getElementById('systemsTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render table
+    function renderSystemsTable(data) {
+        const tbody = document.getElementById('systemsTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((system, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${system.location}</td>
+                <td>${system.system_name}</td>
+                <td>${system.user}</td>
+                <td>${system.ip_address}</td>
+                <td class="${system.antivirus_status === 'فعال' ? 'text-success' : 'text-danger'}">
+                    ${system.antivirus_status}
+                </td>
+                <td class="${system.firewall_status === 'فعال' ? 'text-success' : 'text-danger'}">
+                    ${system.firewall_status}
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editSystem(${system.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSystem(${system.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Add system
+    async function addSystem(event) {
+        event.preventDefault();
+        
+        const data = {
+            location: document.getElementById('location').value,
+            system_name: document.getElementById('systemName').value,
+            user: document.getElementById('user').value,
+            ip_address: document.getElementById('ipAddress').value,
+            antivirus_status: document.getElementById('antivirusStatus').value,
+            firewall_status: document.getElementById('firewallStatus').value
+        };
+        
+        try {
+            const response = await fetch('/api/systems', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                document.getElementById('addSystemForm').reset();
+                loadSystemsData();
+                showAlert('سیستم با موفقیت اضافه شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در افزودن سیستم', 'danger');
+            }
+        } catch (error) {
+            console.error('Error adding system:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Edit system
+    function editSystem(id) {
+        const system = systemsData.find(item => item.id === id);
+        if (!system) return;
+        
+        document.getElementById('editSystemId').value = system.id;
+        document.getElementById('editLocation').value = system.location;
+        document.getElementById('editSystemName').value = system.system_name;
+        document.getElementById('editUser').value = system.user;
+        document.getElementById('editIpAddress').value = system.ip_address;
+        document.getElementById('editAntivirusStatus').value = system.antivirus_status;
+        document.getElementById('editFirewallStatus').value = system.firewall_status;
+        
+        new bootstrap.Modal(document.getElementById('editSystemModal')).show();
+    }
+    
+    // Save changes
+    async function saveSystemChanges() {
+        const id = document.getElementById('editSystemId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            system_name: document.getElementById('editSystemName').value,
+            user: document.getElementById('editUser').value,
+            ip_address: document.getElementById('editIpAddress').value,
+            antivirus_status: document.getElementById('editAntivirusStatus').value,
+            firewall_status: document.getElementById('editFirewallStatus').value
+        };
+        
+        try {
+            const response = await fetch(`/api/systems/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editSystemModal')).hide();
+                loadSystemsData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving system changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete system
+    async function deleteSystem(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/systems/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadSystemsData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting system:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/systems', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                loadSystemsData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel() {
+        if (!systemsData || systemsData.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(systemsData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'systems');
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, 'systems.xlsx');
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

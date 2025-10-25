@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}صفحه اصلی - مدیریت تجهیزات{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="text-center mb-5">
+            <i class="fas fa-server"></i> سیستم جامع مدیریت تجهیزات و زیرساخت
+        </h1>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm dashboard-card">
+            <div class="card-body text-center">
+                <i class="fas fa-desktop fa-4x text-primary mb-3"></i>
+                <h3 class="card-title">داشبورد مدیریت تجهیزات</h3>
+                <p class="card-text">مدیریت سیستم‌ها، تجهیزات تلفنی و دوربین‌های مداربسته</p>
+                {% if session.user_id %}
+                <a href="{{ url_for('equipment_dashboard') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-left"></i> ورود به داشبورد
+                </a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-sign-in-alt"></i> ورود برای دسترسی
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm dashboard-card">
+            <div class="card-body text-center">
+                <i class="fas fa-network-wired fa-4x text-success mb-3"></i>
+                <h3 class="card-title">داشبورد مدیریت زیرساخت</h3>
+                <p class="card-text">آمار و نمودارهای توزیع تجهیزات در محل‌های مختلف</p>
+                {% if session.user_id %}
+                <a href="{{ url_for('infrastructure_dashboard') }}" class="btn btn-success btn-lg">
+                    <i class="fas fa-arrow-left"></i> ورود به داشبورد
+                </a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-success btn-lg">
+                    <i class="fas fa-sign-in-alt"></i> ورود برای دسترسی
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-info-circle"></i> درباره سیستم</h4>
+            </div>
+            <div class="card-body">
+                <p>این سیستم برای مدیریت جامع تجهیزات IT و زیرساخت سازمان طراحی شده است. با استفاده از این پلتفرم می‌توانید:</p>
+                <ul>
+                    <li>تجهیزات کامپیوتری و شبکه را در محل‌های مختلف مدیریت کنید</li>
+                    <li>وضعیت آنتی‌ویروس و فایروال سیستم‌ها را پایش کنید</li>
+                    <li>تلفن‌های داخلی و نیاز به ارتقاء را ثبت کنید</li>
+                    <li>نیازهای نصب دوربین مداربسته را اولویت‌بندی کنید</li>
+                    <li>آمار دقیق از توزیع تجهیزات در زیرساخت داشته باشید</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+</style>
+{% endblock %}

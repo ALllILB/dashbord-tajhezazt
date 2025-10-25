@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}مدیریت تجهیزات تلفنی{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-phone"></i> مدیریت تجهیزات تلفنی</h2>
+    <a href="{{ url_for('equipment_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-right"></i> بازگشت به داشبورد
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-plus"></i> افزودن تجهیز تلفنی جدید</h5>
+            </div>
+            <div class="card-body">
+                <form id="addTelephonyForm">
+                    <div class="mb-3">
+                        <label for="location" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="personnelName" class="form-label">نام پرسنل</label>
+                        <input type="text" class="form-control" id="personnelName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="internalNumber" class="form-label">شماره داخلی</label>
+                        <input type="text" class="form-control" id="internalNumber" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phoneType" class="form-label">نوع تلفن</label>
+                        <input type="text" class="form-control" id="phoneType" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="upgradeNeeded" class="form-label">نیاز به ارتقا</label>
+                        <select class="form-select" id="upgradeNeeded" required>
+                            <option value="بله">بله</option>
+                            <option value="خیر">خیر</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-save"></i> ذخیره تجهیز
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> لیست تجهیزات تلفنی</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportTelephony">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    <label class="btn btn-warning btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importTelephony" accept=".xlsx" style="display: none;">
+                    </label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نام پرسنل</th>
+                                <th>شماره داخلی</th>
+                                <th>نوع تلفن</th>
+                                <th>نیاز به ارتقا</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="telephonyTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editTelephonyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش تجهیزات تلفنی</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTelephonyForm">
+                    <input type="hidden" id="editTelephonyId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPersonnelName" class="form-label">نام پرسنل</label>
+                        <input type="text" class="form-control" id="editPersonnelName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInternalNumber" class="form-label">شماره داخلی</label>
+                        <input type="text" class="form-control" id="editInternalNumber" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPhoneType" class="form-label">نوع تلفن</label>
+                        <input type="text" class="form-control" id="editPhoneType" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUpgradeNeeded" class="form-label">نیاز به ارتقا</label>
+                        <select class="form-select" id="editUpgradeNeeded" required>
+                            <option value="بله">بله</option>
+                            <option value="خیر">خیر</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveTelephonyChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/xlsx.min.js') }}"></script>
+<script>
+    // Global variables
+    let telephonyData = [];
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTelephonyData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Add telephony form
+        document.getElementById('addTelephonyForm').addEventListener('submit', addTelephony);
+        
+        // Export/Import buttons
+        document.getElementById('exportTelephony').addEventListener('click', exportToExcel);
+        document.getElementById('importTelephony').addEventListener('change', handleFileImport);
+        
+        // Save button for modal
+        document.getElementById('saveTelephonyChanges').addEventListener('click', saveTelephonyChanges);
+    }
+    
+    // Load data from API
+    async function loadTelephonyData() {
+        try {
+            const response = await fetch('/api/telephony');
+            telephonyData = await response.json();
+            renderTelephonyTable(telephonyData);
+        } catch (error) {
+            console.error('Error loading telephony data:', error);
+            document.getElementById('telephonyTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render table
+    function renderTelephonyTable(data) {
+        const tbody = document.getElementById('telephonyTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.location}</td>
+                <td>${item.personnel_name}</td>
+                <td>${item.internal_number}</td>
+                <td>${item.phone_type}</td>
+                <td>${item.upgrade_needed === 'بله' ? '<span class="badge bg-warning">بله</span>' : '<span class="badge bg-success">خیر</span>'}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editTelephony(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTelephony(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Add telephony
+    async function addTelephony(event) {
+        event.preventDefault();
+        
+        const data = {
+            location: document.getElementById('location').value,
+            personnel_name: document.getElementById('personnelName').value,
+            internal_number: document.getElementById('internalNumber').value,
+            phone_type: document.getElementById('phoneType').value,
+            upgrade_needed: document.getElementById('upgradeNeeded').value
+        };
+        
+        try {
+            const response = await fetch('/api/telephony', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                document.getElementById('addTelephonyForm').reset();
+                loadTelephonyData();
+                showAlert('تجهیز تلفنی با موفقیت اضافه شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در افزودن تجهیز تلفنی', 'danger');
+            }
+        } catch (error) {
+            console.error('Error adding telephony:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Edit telephony
+    function editTelephony(id) {
+        const item = telephonyData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editTelephonyId').value = item.id;
+        document.getElementById('editLocation').value = item.location;
+        document.getElementById('editPersonnelName').value = item.personnel_name;
+        document.getElementById('editInternalNumber').value = item.internal_number;
+        document.getElementById('editPhoneType').value = item.phone_type;
+        document.getElementById('editUpgradeNeeded').value = item.upgrade_needed;
+        
+        new bootstrap.Modal(document.getElementById('editTelephonyModal')).show();
+    }
+    
+    // Save changes
+    async function saveTelephonyChanges() {
+        const id = document.getElementById('editTelephonyId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            personnel_name: document.getElementById('editPersonnelName').value,
+            internal_number: document.getElementById('editInternalNumber').value,
+            phone_type: document.getElementById('editPhoneType').value,
+            upgrade_needed: document.getElementById('editUpgradeNeeded').value
+        };
+        
+        try {
+            const response = await fetch(`/api/telephony/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editTelephonyModal')).hide();
+                loadTelephonyData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving telephony changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete telephony
+    async function deleteTelephony(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/telephony/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadTelephonyData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting telephony:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/telephony', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                loadTelephonyData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel() {
+        if (!telephonyData || telephonyData.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(telephonyData);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'telephony');
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, 'telephony.xlsx');
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

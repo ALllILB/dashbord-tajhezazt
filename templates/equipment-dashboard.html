@@ -1,0 +1,895 @@
+{% extends "base.html" %}
+
+{% block title %}داشبورد مدیریت تجهیزات{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-active {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .status-inactive {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .priority-urgent {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .priority-normal {
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-desktop"></i> داشبورد مدیریت تجهیزات</h2>
+    <div>
+        {% if session.role == 'admin' %}
+        <a href="{{ url_for('admin_systems') }}" class="btn btn-primary">
+            <i class="fas fa-cog"></i> مدیریت سیستم‌ها
+        </a>
+        <a href="{{ url_for('admin_telephony') }}" class="btn btn-info">
+            <i class="fas fa-phone"></i> مدیریت تلفنی
+        </a>
+        <a href="{{ url_for('admin_cctv') }}" class="btn btn-warning">
+            <i class="fas fa-video"></i> مدیریت دوربین‌ها
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="filter-section">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="locationFilter" class="form-label">فیلتر بر اساس محل</label>
+            <select class="form-select" id="locationFilter">
+                <option value="">همه محل‌ها</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="deviceFilter" class="form-label">فیلتر بر اساس دستگاه</label>
+            <select class="form-select" id="deviceFilter">
+                <option value="">همه دستگاه‌ها</option>
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-outline-secondary w-100" id="resetFilters">
+                <i class="fas fa-redo"></i> بازنشانی فیلترها
+            </button>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="systems-tab" data-bs-toggle="tab" data-bs-target="#systems" type="button" role="tab">
+            <i class="fas fa-desktop"></i> سیستم‌ها
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="telephony-tab" data-bs-toggle="tab" data-bs-target="#telephony" type="button" role="tab">
+            <i class="fas fa-phone"></i> تجهیزات تلفنی
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="cctv-tab" data-bs-toggle="tab" data-bs-target="#cctv" type="button" role="tab">
+            <i class="fas fa-video"></i> دوربین‌های مداربسته
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="dashboardTabsContent">
+    <div class="tab-pane fade show active" id="systems" role="tabpanel">
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-desktop"></i> لیست سیستم‌ها</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportSystems">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    {% if session.role == 'admin' %}
+                    <label class="btn btn-primary btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importSystems" accept=".xlsx" style="display: none;">
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نام سیستم</th>
+                                <th>کاربر</th>
+                                <th>آدرس IP</th>
+                                <th>وضعیت آنتی‌ویروس</th>
+                                <th>وضعیت فایروال</th>
+                                {% if session.role == 'admin' %}
+                                <th>عملیات</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="systemsTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="telephony" role="tabpanel">
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-phone"></i> لیست تجهیزات تلفنی</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportTelephony">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    {% if session.role == 'admin' %}
+                    <label class="btn btn-primary btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importTelephony" accept=".xlsx" style="display: none;">
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نام پرسنل</th>
+                                <th>شماره داخلی</th>
+                                <th>نوع تلفن</th>
+                                <th>نیاز به ارتقا</th>
+                                {% if session.role == 'admin' %}
+                                <th>عملیات</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="telephonyTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="cctv" role="tabpanel">
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-video"></i> لیست نیازهای دوربین مداربسته</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" id="exportCCTV">
+                        <i class="fas fa-file-excel"></i> خروجی Excel
+                    </button>
+                    {% if session.role == 'admin' %}
+                    <label class="btn btn-primary btn-sm">
+                        <i class="fas fa-file-upload"></i> وارد کردن Excel
+                        <input type="file" id="importCCTV" accept=".xlsx" style="display: none;">
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>محل</th>
+                                <th>نقطه مورد نیاز</th>
+                                <th>اولویت</th>
+                                <th>دلیل نیاز</th>
+                                {% if session.role == 'admin' %}
+                                <th>عملیات</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="cctvTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center">در حال بارگذاری...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modals -->
+<div class="modal fade" id="editSystemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش سیستم</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editSystemForm">
+                    <input type="hidden" id="editSystemId">
+                    <div class="mb-3">
+                        <label for="editLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSystemName" class="form-label">نام سیستم</label>
+                        <input type="text" class="form-control" id="editSystemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUser" class="form-label">کاربر</label>
+                        <input type="text" class="form-control" id="editUser" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editIpAddress" class="form-label">آدرس IP</label>
+                        <input type="text" class="form-control" id="editIpAddress" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAntivirusStatus" class="form-label">وضعیت آنتی‌ویروس</label>
+                        <select class="form-select" id="editAntivirusStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editFirewallStatus" class="form-label">وضعیت فایروال</label>
+                        <select class="form-select" id="editFirewallStatus" required>
+                            <option value="فعال">فعال</option>
+                            <option value="غیرفعال">غیرفعال</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveSystemChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editTelephonyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش تجهیزات تلفنی</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTelephonyForm">
+                    <input type="hidden" id="editTelephonyId">
+                    <div class="mb-3">
+                        <label for="editTelephonyLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editTelephonyLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPersonnelName" class="form-label">نام پرسنل</label>
+                        <input type="text" class="form-control" id="editPersonnelName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editInternalNumber" class="form-label">شماره داخلی</label>
+                        <input type="text" class="form-control" id="editInternalNumber" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPhoneType" class="form-label">نوع تلفن</label>
+                        <input type="text" class="form-control" id="editPhoneType" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUpgradeNeeded" class="form-label">نیاز به ارتقا</label>
+                        <select class="form-select" id="editUpgradeNeeded" required>
+                            <option value="بله">بله</option>
+                            <option value="خیر">خیر</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveTelephonyChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editCCTVModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش نیاز دوربین مداربسته</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCCTVForm">
+                    <input type="hidden" id="editCCTVId">
+                    <div class="mb-3">
+                        <label for="editCCTVLocation" class="form-label">محل</label>
+                        <input type="text" class="form-control" id="editCCTVLocation" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPointNeeded" class="form-label">نقطه مورد نیاز</label>
+                        <input type="text" class="form-control" id="editPointNeeded" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPriority" class="form-label">اولویت</label>
+                        <select class="form-select" id="editPriority" required>
+                            <option value="فوری">فوری</option>
+                            <option value="عادی">عادی</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editReason" class="form-label">دلیل نیاز</label>
+                        <textarea class="form-control" id="editReason" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" id="saveCCTVChanges">ذخیره تغییرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/xlsx.min.js') }}"></script>
+<script>
+    // Global variables
+    let systemsData = [];
+    let telephonyData = [];
+    let cctvData = [];
+    let currentFilter = {
+        location: '',
+        device: ''
+    };
+    
+    // Check if user is admin
+    const isAdmin = {{ 'true' if session.role == 'admin' else 'false' }};
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSystemsData();
+        loadTelephonyData();
+        loadCCTVData();
+        setupEventListeners();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Filter controls
+        document.getElementById('locationFilter').addEventListener('change', applyFilters);
+        document.getElementById('deviceFilter').addEventListener('change', applyFilters);
+        document.getElementById('resetFilters').addEventListener('click', resetFilters);
+        
+        // Export buttons
+        document.getElementById('exportSystems').addEventListener('click', () => exportToExcel(systemsData, 'systems'));
+        document.getElementById('exportTelephony').addEventListener('click', () => exportToExcel(telephonyData, 'telephony'));
+        document.getElementById('exportCCTV').addEventListener('click', () => exportToExcel(cctvData, 'cctv'));
+        
+        // Import buttons
+        if (isAdmin) {
+            document.getElementById('importSystems').addEventListener('change', (e) => handleFileImport(e, 'systems'));
+            document.getElementById('importTelephony').addEventListener('change', (e) => handleFileImport(e, 'telephony'));
+            document.getElementById('importCCTV').addEventListener('change', (e) => handleFileImport(e, 'cctv'));
+        }
+        
+        // Save buttons for modals
+        document.getElementById('saveSystemChanges').addEventListener('click', saveSystemChanges);
+        document.getElementById('saveTelephonyChanges').addEventListener('click', saveTelephonyChanges);
+        document.getElementById('saveCCTVChanges').addEventListener('click', saveCCTVChanges);
+    }
+    
+    // Load data from API
+    async function loadSystemsData() {
+        try {
+            const response = await fetch('/api/systems');
+            systemsData = await response.json();
+            renderSystemsTable(systemsData);
+            updateLocationFilter(systemsData);
+        } catch (error) {
+            console.error('Error loading systems data:', error);
+            document.getElementById('systemsTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    async function loadTelephonyData() {
+        try {
+            const response = await fetch('/api/telephony');
+            telephonyData = await response.json();
+            renderTelephonyTable(telephonyData);
+        } catch (error) {
+            console.error('Error loading telephony data:', error);
+            document.getElementById('telephonyTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    async function loadCCTVData() {
+        try {
+            const response = await fetch('/api/cctv');
+            cctvData = await response.json();
+            renderCCTVTable(cctvData);
+        } catch (error) {
+            console.error('Error loading CCTV data:', error);
+            document.getElementById('cctvTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">خطا در بارگذاری داده‌ها</td></tr>';
+        }
+    }
+    
+    // Render tables
+    function renderSystemsTable(data) {
+        const tbody = document.getElementById('systemsTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((system, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${system.location}</td>
+                <td>${system.system_name}</td>
+                <td>${system.user}</td>
+                <td>${system.ip_address}</td>
+                <td class="${system.antivirus_status === 'فعال' ? 'status-active' : 'status-inactive'}">
+                    ${system.antivirus_status}
+                </td>
+                <td class="${system.firewall_status === 'فعال' ? 'status-active' : 'status-inactive'}">
+                    ${system.firewall_status}
+                </td>
+                ${isAdmin ? `
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editSystem(${system.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSystem(${system.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+                ` : ''}
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    function renderTelephonyTable(data) {
+        const tbody = document.getElementById('telephonyTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.location}</td>
+                <td>${item.personnel_name}</td>
+                <td>${item.internal_number}</td>
+                <td>${item.phone_type}</td>
+                <td>${item.upgrade_needed === 'بله' ? '<span class="badge bg-warning">بله</span>' : '<span class="badge bg-success">خیر</span>'}</td>
+                ${isAdmin ? `
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editTelephony(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTelephony(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+                ` : ''}
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    function renderCCTVTable(data) {
+        const tbody = document.getElementById('cctvTableBody');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">داده‌ای برای نمایش وجود ندارد</td></tr>';
+            return;
+        }
+        
+        data.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${item.location}</td>
+                <td>${item.point_needed}</td>
+                <td class="${item.priority === 'فوری' ? 'priority-urgent' : 'priority-normal'}">
+                    ${item.priority}
+                </td>
+                <td>${item.reason || '-'}</td>
+                ${isAdmin ? `
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary" onclick="editCCTV(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCCTV(${item.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+                ` : ''}
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Update location filter
+    function updateLocationFilter(data) {
+        const locationFilter = document.getElementById('locationFilter');
+        const locations = [...new Set(data.map(item => item.location))];
+        
+        // Clear existing options except the first one
+        while (locationFilter.options.length > 1) {
+            locationFilter.remove(1);
+        }
+        
+        // Add new options
+        locations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location;
+            option.textContent = location;
+            locationFilter.appendChild(option);
+        });
+    }
+    
+    // Apply filters
+    function applyFilters() {
+        currentFilter.location = document.getElementById('locationFilter').value;
+        currentFilter.device = document.getElementById('deviceFilter').value;
+        
+        // Filter systems data
+        let filteredSystems = systemsData;
+        if (currentFilter.location) {
+            filteredSystems = filteredSystems.filter(item => item.location === currentFilter.location);
+        }
+        renderSystemsTable(filteredSystems);
+        
+        // Filter telephony data
+        let filteredTelephony = telephonyData;
+        if (currentFilter.location) {
+            filteredTelephony = filteredTelephony.filter(item => item.location === currentFilter.location);
+        }
+        renderTelephonyTable(filteredTelephony);
+        
+        // Filter CCTV data
+        let filteredCCTV = cctvData;
+        if (currentFilter.location) {
+            filteredCCTV = filteredCCTV.filter(item => item.location === currentFilter.location);
+        }
+        renderCCTVTable(filteredCCTV);
+    }
+    
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('locationFilter').value = '';
+        document.getElementById('deviceFilter').value = '';
+        currentFilter = { location: '', device: '' };
+        
+        renderSystemsTable(systemsData);
+        renderTelephonyTable(telephonyData);
+        renderCCTVTable(cctvData);
+    }
+    
+    // Edit functions
+    function editSystem(id) {
+        const system = systemsData.find(item => item.id === id);
+        if (!system) return;
+        
+        document.getElementById('editSystemId').value = system.id;
+        document.getElementById('editLocation').value = system.location;
+        document.getElementById('editSystemName').value = system.system_name;
+        document.getElementById('editUser').value = system.user;
+        document.getElementById('editIpAddress').value = system.ip_address;
+        document.getElementById('editAntivirusStatus').value = system.antivirus_status;
+        document.getElementById('editFirewallStatus').value = system.firewall_status;
+        
+        new bootstrap.Modal(document.getElementById('editSystemModal')).show();
+    }
+    
+    function editTelephony(id) {
+        const item = telephonyData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editTelephonyId').value = item.id;
+        document.getElementById('editTelephonyLocation').value = item.location;
+        document.getElementById('editPersonnelName').value = item.personnel_name;
+        document.getElementById('editInternalNumber').value = item.internal_number;
+        document.getElementById('editPhoneType').value = item.phone_type;
+        document.getElementById('editUpgradeNeeded').value = item.upgrade_needed;
+        
+        new bootstrap.Modal(document.getElementById('editTelephonyModal')).show();
+    }
+    
+    function editCCTV(id) {
+        const item = cctvData.find(item => item.id === id);
+        if (!item) return;
+        
+        document.getElementById('editCCTVId').value = item.id;
+        document.getElementById('editCCTVLocation').value = item.location;
+        document.getElementById('editPointNeeded').value = item.point_needed;
+        document.getElementById('editPriority').value = item.priority;
+        document.getElementById('editReason').value = item.reason || '';
+        
+        new bootstrap.Modal(document.getElementById('editCCTVModal')).show();
+    }
+    
+    // Save changes
+    async function saveSystemChanges() {
+        const id = document.getElementById('editSystemId').value;
+        const data = {
+            location: document.getElementById('editLocation').value,
+            system_name: document.getElementById('editSystemName').value,
+            user: document.getElementById('editUser').value,
+            ip_address: document.getElementById('editIpAddress').value,
+            antivirus_status: document.getElementById('editAntivirusStatus').value,
+            firewall_status: document.getElementById('editFirewallStatus').value
+        };
+        
+        try {
+            const response = await fetch(`/api/systems/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editSystemModal')).hide();
+                loadSystemsData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving system changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    async function saveTelephonyChanges() {
+        const id = document.getElementById('editTelephonyId').value;
+        const data = {
+            location: document.getElementById('editTelephonyLocation').value,
+            personnel_name: document.getElementById('editPersonnelName').value,
+            internal_number: document.getElementById('editInternalNumber').value,
+            phone_type: document.getElementById('editPhoneType').value,
+            upgrade_needed: document.getElementById('editUpgradeNeeded').value
+        };
+        
+        try {
+            const response = await fetch(`/api/telephony/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editTelephonyModal')).hide();
+                loadTelephonyData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving telephony changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    async function saveCCTVChanges() {
+        const id = document.getElementById('editCCTVId').value;
+        const data = {
+            location: document.getElementById('editCCTVLocation').value,
+            point_needed: document.getElementById('editPointNeeded').value,
+            priority: document.getElementById('editPriority').value,
+            reason: document.getElementById('editReason').value
+        };
+        
+        try {
+            const response = await fetch(`/api/cctv/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editCCTVModal')).hide();
+                loadCCTVData();
+                showAlert('تغییرات با موفقیت ذخیره شد', 'success');
+            } else {
+                const error = await response.json();
+                showAlert(error.error || 'خطا در ذخیره تغییرات', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving CCTV changes:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Delete functions
+    async function deleteSystem(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/systems/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadSystemsData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting system:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    async function deleteTelephony(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/telephony/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadTelephonyData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting telephony:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    async function deleteCCTV(id) {
+        if (!confirm('آیا از حذف این مورد اطمینان دارید؟')) return;
+        
+        try {
+            const response = await fetch(`/api/cctv/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadCCTVData();
+                showAlert('مورد با موفقیت حذف شد', 'success');
+            } else {
+                showAlert('خطا در حذف مورد', 'danger');
+            }
+        } catch (error) {
+            console.error('Error deleting CCTV:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+    }
+    
+    // Import/Export functions
+    async function handleFileImport(event, tableType) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch(`/api/import/${tableType}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert(`${result.imported} رکورد با موفقیت وارد شد`, 'success');
+                
+                // Reload the appropriate data
+                if (tableType === 'systems') loadSystemsData();
+                else if (tableType === 'telephony') loadTelephonyData();
+                else if (tableType === 'cctv') loadCCTVData();
+            } else {
+                showAlert(result.error || 'خطا در وارد کردن فایل', 'danger');
+            }
+        } catch (error) {
+            console.error('Error importing file:', error);
+            showAlert('خطا در ارتباط با سرور', 'danger');
+        }
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    function exportToExcel(data, filename) {
+        if (!data || data.length === 0) {
+            showAlert('داده‌ای برای خروجی گرفتن وجود ندارد', 'warning');
+            return;
+        }
+        
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Convert data to worksheet
+        const ws = XLSX.utils.json_to_sheet(data);
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, filename);
+        
+        // Generate and download the file
+        XLSX.writeFile(wb, `${filename}.xlsx`);
+    }
+    
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}
